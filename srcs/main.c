@@ -6,7 +6,7 @@
 /*   By: ntan-wan <ntan-wan@42kl.edu.my>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/03/27 15:24:05 by ntan-wan          #+#    #+#             */
-/*   Updated: 2023/03/29 06:15:34 by ntan-wan         ###   ########.fr       */
+/*   Updated: 2023/03/30 16:05:17 by ntan-wan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -90,27 +90,23 @@ void	store_clues_to_grid(char **av, char *grid[N][N])
 	}
 }
 
-void	debug_print_spaces(int cell_value_len)
+void	debug_simple_printf(int width, char *value)
 {
-	int	i;
-	int	len;
+	int	i;	
 
+	if (value)
+		ft_putstr_fd(value, STDOUT_FILENO);
 	i = -1;
-	len = 1;
-	if (cell_value_len)
-		len = cell_value_len;
-	while (++i < ((N + 1) - len) / 2)
+	while (++i < (width - ft_strlen(value)))
 		ft_putstr_fd(" ", STDOUT_FILENO);
 }
 
 void	debug_print_grid_cell_value(char *cell_value)
 {
-	debug_print_spaces(ft_strlen(cell_value));
 	if (cell_value)
-		ft_putstr_fd(cell_value, STDOUT_FILENO);
+		debug_simple_printf(N * 2, cell_value);
 	else
-		ft_putstr_fd("0", STDOUT_FILENO);
-	debug_print_spaces(ft_strlen(cell_value));
+		debug_simple_printf(N * 2, "0");
 }
 
 void	debug_print_grid(char *grid[N][N])
@@ -149,41 +145,6 @@ void	grid_free(char *grid[N][N])
 	}
 }
 
-void	iterate_col_top_down(int col, void (*f)(int, int, char *[N][N]), char *grid[N][N])
-{
-	int	row;
-
-	row = 1;
-	while (row >= 1 && row <= N - 2)
-		f(row++, col, grid);
-}
-
-void	iterate_col_down_top(int col, void (*f)(int, int, char *[N][N]), char *grid[N][N])
-{
-	int	row;
-
-	row = 1;
-	while (row >= 1 && row <= N - 2)
-		f(row++, col, grid);
-}
-
-void	iterate_row_left_right(int row, void (*f)(int, int, char *[N][N]), char *grid[N][N])
-{
-	int	col;
-
-	col = 1;
-	while (col >= 1 && col <= N - 2)
-	 	f(row, col++, grid);
-}
-
-void	iterate_row_right_left(int row, void (*f)(int, int, char *[N][N]), char *grid[N][N])
-{
-	int	col;
-
-	col = 1;
-	while (col >= 1 && col <= N - 2)
-		f(row, col++, grid);
-}
 
 int	count_digits_len(int num)
 {
@@ -247,12 +208,97 @@ int	ft_simple_atoi(char *num_str)
 	return (num);
 }
 
+void	iterate_row_left_right(void (*f)(int, int, char *[N][N]), int row, int col, char *grid[N][N])
+{
+	while (col >= 0 && col <= N - 1)
+	 	f(row, col++, grid);
+}
+
+void	iterate_row_right_left(void (*f)(int, int, char *[N][N]), int row, int col, char *grid[N][N])
+{
+	while (col >= 1 && col <= N - 2)
+		f(row, col--, grid);
+}
+
+void	iterate_col_top_down(void (*f)(int, int, char *[N][N]), int row, int col, char *grid[N][N])
+{
+	while (row >= 0 && row <= N - 1)
+		f(row++, col, grid);
+}
+
+void	iterate_col_down_top(void (*f)(int, int, char *[N][N]), int row, int col, char *grid[N][N])
+{
+	while (row >= 0 && row <= N - 1)
+		f(row--, col, grid);
+}
+
+void	iterate_top_clues(void (*f)(int, int, char *[N][N]), char *grid[N][N])
+{
+	int	row;
+	int	col;
+
+	row = 0;
+	col = 1;
+	iterate_row_left_right(f, row, col, grid);
+}
+
+void	iterate_bottom_clues(void (*f)(int, int, char *[N][N]), char *grid[N][N])
+{
+	int	row;
+	int	col;
+
+	row = N - 1;
+	col = 1;
+	iterate_row_left_right(f, row, col, grid);
+}
+
+void	iterate_left_clues(void (*f)(int, int, char *[N][N]), char *grid[N][N])
+{
+	int	row;
+	int	col;
+
+	row = 1;
+	col = 0;
+	iterate_col_top_down(f, row, col, grid);
+}
+
+void	iterate_right_clues(void (*f)(int, int, char *[N][N]), char *grid[N][N])
+{
+	int	row;	
+	int	col;
+
+	row = 0;
+	col = N - 1;
+	iterate_col_top_down(f, row, col, grid);
+}
+
+void	process_edge_clue(void (*f)(int, int, char *[N][N]), int row, int col, char *grid[N][N])
+{
+	if (row == 0)
+		iterate_col_top_down(f, row, col, grid);
+	else if (row == N - 1)
+		iterate_col_down_top(f, row, col, grid);
+	else if (col == 0)
+		iterate_row_left_right(f, row, col, grid);
+	else if (col == N - 1)
+		iterate_row_right_left(f, row, col, grid);
+}
+
+bool	is_edge_clue(int row, int col)
+{
+	return (row == 0 || row == N - 1 || col == 0 || col == N - 1);
+}
+
 void	put_num_ascending(int row, int col, char *grid[N][N])
 {
 	static int i = 0;
 
-	if (grid[row][col] == NULL)
+	if (is_edge_clue(row, col))
+		return ;
+	else if (ft_strlen(grid[row][col]) != 1)
 	{
+		if (grid[row][col])
+			free(grid[row][col]);
 		grid[row][col] = ft_simple_itoa(i + 1);
 	}
 	i = (i + 1) % (N - 2);
@@ -262,8 +308,12 @@ void	put_num_descending(int row, int col, char *grid[N][N])
 {
 	static int i = N - 2;
 
-	if (grid[row][col] == NULL)
+	if (is_edge_clue(row, col))
+		return ;
+	else if (ft_strlen(grid[row][col]) != 1)
 	{
+		if (grid[row][col])
+			free(grid[row][col]);
 		grid[row][col] = ft_simple_itoa(i);
 	}
 	if (i == 1)
@@ -272,42 +322,165 @@ void	put_num_descending(int row, int col, char *grid[N][N])
 		i--;
 }
 
-void	edge_constraint()
+/* 
+	@brief Calculate the distance from edge to the cell.
+	@param clue_pos[2] Row and col index of the clue.
+	@param row The cell's row index.
+	@param col The cell's col index.
+ */
+int	calculate_distance(int clue_pos[2], int row, int col)
 {
-	
+	if (clue_pos[0] == 0)
+		return (row);
+	else if (clue_pos[0] == N - 1)
+		return (N - 1 - row);
+	else if (clue_pos[1] == 0)
+		return (col);
+	else if (clue_pos[1] == N - 1)
+		return (N - 1 - col);
+	else
+		return (0);
 }
 
-void	process_edge_clue(int row, int col, void (*f)(int, int, char *grid[N][N]), char *grid[N][N])
+int	calculate_edge_constraint(int clue, int distance)
 {
-	if (row == 0)
-		iterate_col_top_down(col, f, grid);
-	else if (row == N - 1)
-		iterate_col_down_top(col, f, grid);
-	else if (col == 0)
-		iterate_row_left_right(row, f, grid);
-	else if (col == N - 1)
-		iterate_row_right_left(row, f, grid);
+	return ((N - 2) - clue + 2 + distance);
+}
+
+char	*ft_strjoin(char *str1, char *str2)
+{
+	int		i;
+	int		j;
+	int		str_len;
+	char	*strjoin;
+
+	i = -1;
+	j = -1;
+	if (!str1 || !str2)
+		return (NULL);
+	str_len = ft_strlen(str1) + ft_strlen(str2);
+	strjoin = malloc((str_len + 1) * sizeof(char));
+	while (++i < str_len)
+	{
+		if (i < ft_strlen(str1))
+			strjoin[i] = str1[i];
+		else if (++j < ft_strlen(str2))
+			strjoin[i] = str2[j];
+	}
+	strjoin[i] = '\0';
+	return (strjoin);
+}
+
+void	ft_bzero(void *p, size_t n)
+{
+	size_t			i;
+	unsigned char	*ptr;
+
+	i = 0;
+	ptr = p;
+	while (i < n)
+	{
+		*ptr++ = 0;
+		i++;
+	}
+}
+
+void	*ft_calloc(size_t count, size_t size)
+{
+	void	*ptr;
+	if (count == SIZE_MAX || size == SIZE_MAX)
+		return (NULL);
+	ptr = malloc(count * size);
+	if (ptr)
+		ft_bzero(ptr, count *size);
+	return (ptr);
+}
+
+void	ft_simple_strcat(char *dst, char *src, size_t dst_size)
+{
+	size_t	i;
+	size_t	dst_content_len;
+
+	i = 0;
+	dst_content_len = ft_strlen(dst);
+	while (src[i] && dst_content_len + 1 < dst_size)
+	{
+		dst[dst_content_len++]	 = src[i];
+		i++;
+	}
+	dst[dst_content_len] = '\0';
+}
+
+char	*get_num_range(int edge_constraint)
+{
+	int		i;
+	char	*num;
+	char	*num_range;
+	size_t	num_range_size;
+
+	i = 0;
+	num_range_size = edge_constraint * 2 + 1;
+	while (++i < edge_constraint && i <= N - 2)
+	{
+		if (i == 1)
+			num_range = ft_calloc(num_range_size, sizeof(char));
+		num = ft_simple_itoa(i);
+		ft_simple_strcat(num_range, num, num_range_size);
+		ft_simple_strcat(num_range, ",", num_range_size);
+		free(num);
+	}
+	return (num_range);
+}
+
+void	put_num_range(int row, int col, char *grid[N][N])
+{
+	static int	clue;
+	static int	clue_pos[2];
+	int			distance;
+	int			edge_constraint;
+
+	distance = 0;
+	if (is_edge_clue(row, col))
+	{
+		clue = ft_simple_atoi(grid[row][col]);
+		clue_pos[0] = row;
+		clue_pos[1] = col;
+	}
+	else
+	{
+		distance = calculate_distance(clue_pos, row, col);
+		edge_constraint = calculate_edge_constraint(clue, distance);
+		grid[row][col] = get_num_range(edge_constraint);
+	}
+	
 }
 
 void	solve_edge_clue(int row, int col, char *grid[N][N])	
 {
 	int	min;
 	int	max;
+	int	clue;
 
 	min = 1;
 	max = N - 2;
-	if (ft_simple_atoi(grid[row][col]) == max)
-		process_edge_clue(row, col, put_num_ascending, grid);
-	else if (ft_simple_atoi(grid[row][col]) == min)
-		process_edge_clue(row, col, put_num_descending, grid);
+	if (grid[row][col])
+	{
+		clue = ft_simple_atoi(grid[row][col]);
+		if (clue == max)
+			process_edge_clue(put_num_ascending, row, col, grid);
+		else if (clue == min)
+			process_edge_clue(put_num_descending, row, col, grid);
+		else
+			process_edge_clue(put_num_range, row, col, grid);
+	}
 }
 
 void	iterate_edge_clues(void (*f)(int, int, char *[N][N]), char *grid[N][N])
 {
-	iterate_row_left_right(0, f, grid);
-	iterate_row_left_right(N - 1, f, grid);
-	iterate_col_top_down(0, f, grid);
-	iterate_col_top_down(N - 1, f, grid);
+	iterate_top_clues(f, grid);
+	// iterate_bottom_clues(f, grid);
+	// iterate_left_clues(f, grid);
+	// iterate_right_clues(f, grid);
 }
 
 int main(int ac, char **av)
@@ -316,10 +489,12 @@ int main(int ac, char **av)
 
 	store_clues_to_grid(av, grid);
 	iterate_edge_clues(solve_edge_clue, grid);
-	// edge_clue_top_solve(grid);
-	// process_edge_clues(grid);
-	// edge_constraint();
 	debug_print_grid(grid);
 	grid_free(grid);
+	
+	// char	*num_range;
+	// num_range = get_num_range(5);
+	// printf("%s\n", num_range);
+	// free(num_range);
 	return (0);
 }
