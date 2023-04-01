@@ -6,7 +6,7 @@
 /*   By: ntan-wan <ntan-wan@42kl.edu.my>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/03/27 15:24:05 by ntan-wan          #+#    #+#             */
-/*   Updated: 2023/03/30 16:05:17 by ntan-wan         ###   ########.fr       */
+/*   Updated: 2023/04/01 08:45:39 by ntan-wan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -323,12 +323,12 @@ void	put_num_descending(int row, int col, char *grid[N][N])
 }
 
 /* 
-	@brief Calculate the distance from edge to the cell.
+	@brief Find the distance from edge to the cell.
 	@param clue_pos[2] Row and col index of the clue.
 	@param row The cell's row index.
 	@param col The cell's col index.
  */
-int	calculate_distance(int clue_pos[2], int row, int col)
+int	find_distance(int clue_pos[2], int row, int col)
 {
 	if (clue_pos[0] == 0)
 		return (row);
@@ -340,11 +340,6 @@ int	calculate_distance(int clue_pos[2], int row, int col)
 		return (N - 1 - col);
 	else
 		return (0);
-}
-
-int	calculate_edge_constraint(int clue, int distance)
-{
-	return ((N - 2) - clue + 2 + distance);
 }
 
 char	*ft_strjoin(char *str1, char *str2)
@@ -405,13 +400,13 @@ void	ft_simple_strcat(char *dst, char *src, size_t dst_size)
 	dst_content_len = ft_strlen(dst);
 	while (src[i] && dst_content_len + 1 < dst_size)
 	{
-		dst[dst_content_len++]	 = src[i];
+		dst[dst_content_len++] = src[i];
 		i++;
 	}
 	dst[dst_content_len] = '\0';
 }
 
-char	*get_num_range(int edge_constraint)
+char	*get_num_range(int max_range)
 {
 	int		i;
 	char	*num;
@@ -419,40 +414,146 @@ char	*get_num_range(int edge_constraint)
 	size_t	num_range_size;
 
 	i = 0;
-	num_range_size = edge_constraint * 2 + 1;
-	while (++i < edge_constraint && i <= N - 2)
+	num_range = NULL;
+	num_range_size = max_range * 2 + 1;
+	while (++i < max_range && i <= N - 2)
 	{
 		if (i == 1)
 			num_range = ft_calloc(num_range_size, sizeof(char));
 		num = ft_simple_itoa(i);
 		ft_simple_strcat(num_range, num, num_range_size);
-		ft_simple_strcat(num_range, ",", num_range_size);
+		if (i != N - 2 && i != max_range - 1)
+			ft_simple_strcat(num_range, ",", num_range_size);
 		free(num);
 	}
 	return (num_range);
 }
 
+char	*ft_simple_substr(char *str, unsigned int start_index, size_t len)
+{
+	int		i;
+	char	*substr;
+	int		substr_len;
+	
+	if (!str || !len)
+		return (NULL);
+	substr_len = ft_strlen(str) - start_index;
+	substr = malloc((substr_len + 1) * sizeof(char));
+	i = -1;
+	while (++i < len && str[start_index])
+		substr[i] = str[start_index++];
+	substr[i] = '\0';
+	return (substr);
+}
+
+char	*ft_strchr(char *str, int c)
+{
+	while (*str)
+	{
+		if (*str == c)	
+			return (str);
+		str++;
+	}
+	return (NULL);
+}
+
+int	find_word_count(char *str, char *delimiters)
+{
+	int	i;
+	int	word_count;
+
+	i = -1;
+	word_count = 0;
+	while (str[++i])
+	{
+		if (i == 0)
+			word_count = 1;
+		if (ft_strchr(delimiters, str[i]))
+			word_count++;
+	}
+	return (word_count);
+}
+
+char	**ft_split(char *str, char *delimiters)
+{
+	int		i;
+	int		j;
+	char	**arr;
+	int		word_start_index;
+
+	i = -1;
+	j = -1;
+	word_start_index = 0;
+	while (str[++i])
+	{
+		if (i == 0)
+			arr = malloc((find_word_count(str, delimiters) + 1) * sizeof(char *));
+		if (ft_strchr(delimiters, str[i]))
+		{
+			arr[++j] = ft_simple_substr(str, word_start_index, i - word_start_index);
+			word_start_index = i + 1;
+		}
+		if (i + 1 == ft_strlen(str))
+			arr[++j] = ft_simple_substr(str, word_start_index, ++i - word_start_index);
+	}
+	arr[++j] = NULL;
+	return (arr);
+}
+
+int	ft_strncmp(char *str1, char *str2, size_t n)
+{
+	size_t	i;		
+	
+	i = 0;
+	if (n == 0)
+		return (0);
+	while (i < n - 1 && str1[i] && str2[i])
+	{
+		if (str1[i] != str2[i])
+			break ;
+		i++;
+	}
+	return ((unsigned char)str1[i] - (unsigned char)str2[i]);
+}
+
+void	filter_num_range(char *num_range, int num)
+{
+	int	i;	
+
+	i = -1;
+}
+
+int	get_max_range(int clue, int clue_pos[2], int row, int col)
+{	
+	return ((N - 2) - clue + 2 + find_distance(clue_pos, row, col));
+}
+
+
 void	put_num_range(int row, int col, char *grid[N][N])
 {
 	static int	clue;
 	static int	clue_pos[2];
-	int			distance;
-	int			edge_constraint;
+	char		*num_range;
 
-	distance = 0;
 	if (is_edge_clue(row, col))
 	{
 		clue = ft_simple_atoi(grid[row][col]);
 		clue_pos[0] = row;
 		clue_pos[1] = col;
 	}
-	else
+	else if (ft_strlen(grid[row][col]) != 1)
 	{
-		distance = calculate_distance(clue_pos, row, col);
-		edge_constraint = calculate_edge_constraint(clue, distance);
-		grid[row][col] = get_num_range(edge_constraint);
+		num_range = get_num_range(get_max_range(clue, clue_pos, row, col));
+		if (ft_strlen(grid[row][col]) == 0)
+			grid[row][col] = num_range;
+		else if (ft_strlen(grid[row][col]) > ft_strlen(num_range))
+		{
+			free(grid[row][col]);
+			grid[row][col] = num_range;
+		}
+		else
+			free(num_range);
 	}
-	
 }
 
 void	solve_edge_clue(int row, int col, char *grid[N][N])	
@@ -478,9 +579,76 @@ void	solve_edge_clue(int row, int col, char *grid[N][N])
 void	iterate_edge_clues(void (*f)(int, int, char *[N][N]), char *grid[N][N])
 {
 	iterate_top_clues(f, grid);
-	// iterate_bottom_clues(f, grid);
-	// iterate_left_clues(f, grid);
-	// iterate_right_clues(f, grid);
+	iterate_bottom_clues(f, grid);
+	iterate_left_clues(f, grid);
+	iterate_right_clues(f, grid);
+}
+
+void	rm_array_item(char **arr, int index)
+{
+	while (arr[index])	
+	{
+		free(arr[index]);
+		if (arr[index + 1])
+			arr[index] = ft_strdup(arr[index + 1]);
+		else
+			arr[index] = NULL;
+		index++;
+	}
+}
+
+char 	*arr_str_concat(char **arr, char *delimiter)
+{
+	int		i;
+	char	*str;
+	char	*to_del;
+
+	i = 0;
+	str = arr[0];
+	while (arr[++i])
+	{
+		str = ft_strjoin(str, delimiter);
+		to_del = str;
+		str = ft_strjoin(str, arr[i]);
+		free(to_del);
+	}
+	return (str);
+}
+
+void	arr_str_free(char ***array)
+{
+	int		i;
+	char	**arr;
+
+	i = -1;
+	arr = *array;
+	if (!arr)
+		return ;
+	while (arr[++i])
+		free(arr[i]);
+	free(arr);
+	*array = NULL;
+}
+
+char	*rm_num(char *num_range, char *num)
+{
+	int		i;
+	char	**arr;
+	char	*result;
+
+	i = -1;
+	arr = ft_split(num_range, ",");
+	while (arr[++i])
+	{
+		if (ft_strncmp(arr[i], num, ft_strlen(num)) == 0)
+		{
+			rm_array_item(arr, i);
+			break ;
+		}
+	}
+	result = arr_str_concat(arr, ",");
+	arr_str_free(&arr);
+	return (result);
 }
 
 int main(int ac, char **av)
@@ -492,9 +660,32 @@ int main(int ac, char **av)
 	debug_print_grid(grid);
 	grid_free(grid);
 	
-	// char	*num_range;
-	// num_range = get_num_range(5);
-	// printf("%s\n", num_range);
-	// free(num_range);
+	
+	// rm_array_item(ft_split("hello,man,world", ","), 2);
+
+	// char	**arr;
+	// arr = ft_split("1,2,3,4", ",");
+	// rm_array_item(arr, 3);
+	// for (int i = 0; arr[i]; i++)
+	// {
+	// 	printf("%s\n", arr[i]);
+	// 	free(arr[i]);
+	// }
+	// free(arr);
+	
+	// int	count;
+	// printf("%d\n", find_word_count("hello,world", ","));
+	// char *arr[] = {"hello", "world",NULL};
+	// char *str = arr_str_concat(arr);
+	// printf("%s\n", str);
+	// free(str);
+
+	// char *s = ft_strjoin("hello", "world");
+	// printf("%s\n", s);
+	// free(s);
+	// printf("%d\n", ft_strncmp("2", "1", 1));
+	// char *num = rm_num("1", "1");
+	// printf("test %s\n", num);
+	// free(num);
 	return (0);
 }
